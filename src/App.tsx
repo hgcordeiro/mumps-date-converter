@@ -1,4 +1,4 @@
-import React, {useCallback, useRef, useState} from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   ScrollView,
   TextInput,
@@ -8,31 +8,49 @@ import {
   StatusBar,
 } from 'react-native';
 
-import {GestureHandlerRootView} from 'react-native-gesture-handler';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
-import {addDays, differenceInDays, format, isDate} from 'date-fns';
+import {
+  addDays,
+  addSeconds,
+  differenceInDays,
+  differenceInSeconds,
+  format,
+  getDate,
+  getMonth,
+  getYear,
+  isDate,
+} from 'date-fns';
 
 import DateTimePicker from '@react-native-community/datetimepicker';
 
-import {Form} from '@unform/mobile';
-import {FormHandles} from '@unform/core';
+import { Form } from '@unform/mobile';
+import { FormHandles } from '@unform/core';
 
 import Input from './components/Input';
 import NumericInput from './components/NumericInput';
 
-import {Container, Title} from './styles';
+import { Container, Title } from './styles';
 
 const App: React.FC = () => {
   const formRef = useRef<FormHandles>(null);
-  const dateRef = useRef<TextInput>(null);
   const today = new Date();
+  const day = getDate(today);
+  const month = getMonth(today);
+  const year = getYear(today);
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(today);
+  const [selectedTime, setSelectedTime] = useState(today);
   const [dateValue, setDateValue] = useState<string>(
     format(today, 'dd/MM/yyyy'),
   );
+  const [timeValue, setTimeValue] = useState<string>(format(today, 'HH:mm:ss'));
   const [mumpsDateValue, setMumpsDateValue] = useState<string>(
-    differenceInDays(today, new Date(1840, 11, 31, 0, 0)).toString(),
+    differenceInDays(today, new Date(1840, 11, 31, 0, 0, 0)).toString(),
+  );
+  const [mumpsTimeValue, setMumpsTimeValue] = useState<string>(
+    differenceInSeconds(today, new Date(year, month, day, 0, 0, 0)).toString(),
   );
 
   const mumpsToDate = (mumpsDateFormat: string): string => {
@@ -53,8 +71,29 @@ const App: React.FC = () => {
     return mumpsFormat.toString();
   };
 
+  const mumpsToTime = (mumpsTimeFormat: string): string => {
+    const timeFormat = format(
+      addSeconds(new Date(1840, 11, 31, 0, 0), Number(mumpsTimeFormat)),
+      'HH:mm:ss',
+    );
+
+    return timeFormat;
+  };
+
+  const timeToMumps = (timeFormat: Date): string => {
+    const timeFormatDay = getDate(timeFormat);
+    const timeFormatMonth = getMonth(timeFormat);
+    const timeFormatYear = getYear(timeFormat);
+    const mumpsTimeFormat = differenceInSeconds(
+      timeFormat,
+      new Date(timeFormatYear, timeFormatMonth, timeFormatDay, 0, 0, 0),
+    );
+
+    return mumpsTimeFormat.toString();
+  };
+
   const handleToggleDatePicker = useCallback(() => {
-    setShowDatePicker(state => !state);
+    setShowDatePicker((state) => !state);
   }, []);
 
   const handleDateChanged = useCallback(
@@ -97,6 +136,50 @@ const App: React.FC = () => {
     }
   }, []);
 
+  const handleToggleTimePicker = useCallback(() => {
+    setShowTimePicker((state) => !state);
+  }, []);
+
+  const handleTimeChanged = useCallback(
+    (event: any, time: Date | undefined) => {
+      if (Platform.OS === 'android') {
+        setShowTimePicker(false);
+      }
+      if (time) {
+        setSelectedTime(time);
+        setTimeValue(format(time, 'HH:mm:ss'));
+
+        const seconds = timeToMumps(time);
+
+        setMumpsTimeValue(seconds);
+      } else if (mumpsTimeValue.length === 0) {
+        setMumpsTimeValue('');
+      }
+    },
+    [mumpsTimeValue],
+  );
+
+  const checkMumpsMaxTime = (mumpsTime: string): string => {
+    if (Number(mumpsTime) > 86399) {
+      return '86399';
+    }
+    return mumpsTime;
+  };
+
+  const handleMumpsTimeChanged = useCallback((mumpsTime: string) => {
+    if (mumpsTime.length > 0 && Number(mumpsTime) >= 0) {
+      const checkedMumpsTime = checkMumpsMaxTime(mumpsTime);
+
+      setMumpsTimeValue(checkedMumpsTime);
+
+      const time = mumpsToTime(checkedMumpsTime);
+
+      setTimeValue(time);
+    } else {
+      setTimeValue('');
+    }
+  }, []);
+
   return (
     <>
       <StatusBar
@@ -105,15 +188,17 @@ const App: React.FC = () => {
         translucent
       />
 
-      <View style={{flex: 1, backgroundColor: '#312e38'}}>
+      <View style={{ flex: 1, backgroundColor: '#312e38' }}>
         <KeyboardAvoidingView
-          style={{flex: 1}}
+          style={{ flex: 1 }}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          enabled>
-          <GestureHandlerRootView style={{flex: 1}}>
+          enabled
+        >
+          <GestureHandlerRootView style={{ flex: 1 }}>
             <ScrollView
               keyboardShouldPersistTaps="handled"
-              contentContainerStyle={{flex: 1}}>
+              contentContainerStyle={{ flex: 1 }}
+            >
               <Container>
                 <View>
                   <Title>MUMPS Date Converter</Title>
@@ -121,7 +206,6 @@ const App: React.FC = () => {
 
                 <Form ref={formRef} onSubmit={() => {}}>
                   <Input
-                    ref={dateRef}
                     icon="calendar"
                     name="date"
                     placeholder="Date (31/12/1840 to 31/12/9999)"
@@ -134,7 +218,7 @@ const App: React.FC = () => {
 
                   {showDatePicker && (
                     <DateTimePicker
-                      {...(Platform.OS === 'ios' && {textColor: '#f4ede8'})}
+                      {...(Platform.OS === 'ios' && { textColor: '#f4ede8' })}
                       mode="date"
                       display={
                         Platform.OS === 'android' ? 'calendar' : 'spinner'
@@ -156,6 +240,41 @@ const App: React.FC = () => {
                     value={mumpsDateValue}
                     onChangeText={handleMumpsDateChanged}
                     mask="[0000000]"
+                  />
+
+                  <Input
+                    icon="watch"
+                    name="time"
+                    placeholder="Time (00:00:00 to 23:59:59)"
+                    returnKeyType="send"
+                    defaultValue={Date()}
+                    value={timeValue}
+                    showSoftInputOnFocus={false}
+                    onTouchStart={handleToggleTimePicker}
+                  />
+
+                  {showTimePicker && (
+                    <DateTimePicker
+                      {...(Platform.OS === 'ios' && { textColor: '#f4ede8' })}
+                      mode="time"
+                      display={Platform.OS === 'android' ? 'clock' : 'spinner'}
+                      onChange={handleTimeChanged}
+                      value={selectedTime}
+                      minimumDate={new Date(1840, 11, 31, 0, 0, 0)}
+                      maximumDate={new Date(9999, 11, 31, 23, 59, 59)}
+                    />
+                  )}
+
+                  <NumericInput
+                    name="mumpsInternalTime"
+                    icon="hash"
+                    placeholder="Number of seconds (0 to 86399)"
+                    autoCorrect={false}
+                    keyboardType="phone-pad"
+                    returnKeyType="send"
+                    value={mumpsTimeValue}
+                    onChangeText={handleMumpsTimeChanged}
+                    mask="[00000]"
                   />
                 </Form>
               </Container>

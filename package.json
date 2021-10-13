@@ -26,6 +26,7 @@
   "devDependencies": {
     "@babel/core": "^7.12.9",
     "@babel/runtime": "^7.12.5",
+    "@testing-library/jest-native": "^4.0.2",
     "@types/jest": "^26.0.23",
     "@types/react-native": "^0.65.0",
     "@types/react-native-vector-icons": "^6.4.9",
@@ -47,6 +48,7 @@
     "metro-react-native-babel-preset": "^0.66.0",
     "prettier": "^2.4.1",
     "react-native-codegen": "^0.0.7",
+    "react-native-testing-library": "^6.0.0",
     "react-test-renderer": "17.0.2",
     "typescript": "^3.8.3"
   },
@@ -55,6 +57,20 @@
   },
   "jest": {
     "preset": "react-native",
+    "setupFilesAfterEnv": [
+      "@testing-library/jest-native/extend-expect"
+    ],
+    "setupFiles": [
+      "./src/setupTests.ts",
+      "./node_modules/react-native-gesture-handler/jestSetup.js"
+    ],
+    "transformIgnorePatterns": [
+      "./node_modules/(?!@react-native|react-native|@react-native-community|@react-navigation)"
+    ],
+    "collectCoverageFrom": [
+      "src/*.tsx",
+      "src/components/**/*.tsx"
+    ],
     "moduleFileExtensions": [
       "ts",
       "tsx",
