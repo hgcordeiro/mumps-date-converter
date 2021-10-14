@@ -1,4 +1,10 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import {
   ScrollView,
   TextInput,
@@ -19,7 +25,6 @@ import {
   getDate,
   getMonth,
   getYear,
-  isDate,
 } from 'date-fns';
 
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -27,10 +32,27 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Form } from '@unform/mobile';
 import { FormHandles } from '@unform/core';
 
+import RadioGroup, { RadioButtonProps } from 'react-native-radio-buttons-group';
+
 import Input from './components/Input';
 import NumericInput from './components/NumericInput';
 
 import { Container, Title } from './styles';
+
+const radioButtonsData: RadioButtonProps[] = [
+  {
+    id: '1', // acts as primary key, should be unique and non-empty string
+    label: '$HOROLOG',
+    value: '0',
+    selected: true,
+  },
+  {
+    id: '2',
+    label: '$ZZPH',
+    value: '1',
+    selected: false,
+  },
+];
 
 const App: React.FC = () => {
   const formRef = useRef<FormHandles>(null);
@@ -42,13 +64,22 @@ const App: React.FC = () => {
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(today);
   const [selectedTime, setSelectedTime] = useState(today);
+  const [isDateFocused, setIsDateFocused] = useState(false);
+  const [isMumpsDateFocused, setIsMumpsDateFocused] = useState(false);
+
+  const [radioButtons, setRadioButtons] =
+    useState<RadioButtonProps[]>(radioButtonsData);
+
   const [dateValue, setDateValue] = useState<string>(
     format(today, 'dd/MM/yyyy'),
   );
+
   const [timeValue, setTimeValue] = useState<string>(format(today, 'HH:mm:ss'));
+
   const [mumpsDateValue, setMumpsDateValue] = useState<string>(
     differenceInDays(today, new Date(1840, 11, 31, 0, 0, 0)).toString(),
   );
+
   const [mumpsTimeValue, setMumpsTimeValue] = useState<string>(
     differenceInSeconds(today, new Date(year, month, day, 0, 0, 0)).toString(),
   );
@@ -105,14 +136,16 @@ const App: React.FC = () => {
         setSelectedDate(date);
         setDateValue(format(date, 'dd/MM/yyyy'));
 
-        const days = dateToMumps(date);
+        const days = String(
+          Number(dateToMumps(date)) + Number(radioButtons[1].selected),
+        );
 
         setMumpsDateValue(days);
       } else if (mumpsDateValue.length === 0) {
         setMumpsDateValue('');
       }
     },
-    [mumpsDateValue],
+    [mumpsDateValue.length, radioButtons],
   );
 
   const checkMumpsMaxDate = (mumpsDate: string): string => {
@@ -122,19 +155,68 @@ const App: React.FC = () => {
     return mumpsDate;
   };
 
-  const handleMumpsDateChanged = useCallback((mumpsDate: string) => {
-    if (mumpsDate.length > 0 && Number(mumpsDate) >= 0) {
-      const checkedMumsDate = checkMumpsMaxDate(mumpsDate);
+  const handleMumpsDateChanged = useCallback(
+    (mumpsDate: string) => {
+      if (mumpsDate.length > 0 && Number(mumpsDate) >= 0) {
+        const checkedMumpsDate = checkMumpsMaxDate(mumpsDate);
 
-      setMumpsDateValue(checkedMumsDate);
+        setMumpsDateValue(checkedMumpsDate);
 
-      const date = mumpsToDate(checkedMumsDate);
+        const date = mumpsToDate(
+          String(Number(checkedMumpsDate) - Number(radioButtons[1].selected)),
+        );
 
-      setDateValue(date);
-    } else {
-      setDateValue('');
-    }
-  }, []);
+        setDateValue(date);
+      } else {
+        setDateValue('');
+      }
+    },
+    [radioButtons],
+  );
+
+  const handlePressRadioButton = useCallback(
+    (radioButtonsArray: RadioButtonProps[]) => {
+      setRadioButtons(radioButtonsArray);
+
+      // if (Platform.OS === 'android') {
+      //   setShowDatePicker(false);
+      // }
+      if (selectedDate) {
+        setSelectedDate(selectedDate);
+        setDateValue(format(selectedDate, 'dd/MM/yyyy'));
+
+        const days = String(
+          Number(dateToMumps(selectedDate)) + Number(radioButtons[1].selected),
+        );
+
+        setMumpsDateValue(days);
+      } else if (mumpsDateValue.length === 0) {
+        setMumpsDateValue('');
+      }
+    },
+    [mumpsDateValue, radioButtons, selectedDate],
+  );
+
+  // useMemo(() => {
+  //   console.log('useEffect');
+  //   console.log(radioButtons[0].selected);
+  //   console.log(radioButtons[1].selected);
+  //   if (Platform.OS === 'android') {
+  //     setShowDatePicker(false);
+  //   }
+  //   if (selectedDate) {
+  //     setSelectedDate(selectedDate);
+  //     setDateValue(format(selectedDate, 'dd/MM/yyyy'));
+
+  //     const days = String(
+  //       Number(dateToMumps(selectedDate)) + Number(radioButtons[1].selected),
+  //     );
+
+  //     setMumpsDateValue(days);
+  //   } else if (mumpsDateValue.length === 0) {
+  //     setMumpsDateValue('');
+  //   }
+  // }, [radioButtons, selectedDate]);
 
   const handleToggleTimePicker = useCallback(() => {
     setShowTimePicker((state) => !state);
@@ -205,6 +287,11 @@ const App: React.FC = () => {
                 </View>
 
                 <Form ref={formRef} onSubmit={() => {}}>
+                  <RadioGroup
+                    radioButtons={radioButtons}
+                    onPress={handlePressRadioButton}
+                    layout="row"
+                  />
                   <Input
                     icon="calendar"
                     name="date"
