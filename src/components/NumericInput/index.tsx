@@ -6,10 +6,10 @@ import React, {
   useImperativeHandle,
   forwardRef,
 } from 'react';
-import {TextInputProps} from 'react-native';
-import {useField} from '@unform/core';
+import { TextInputProps } from 'react-native';
+import { useField } from '@unform/core';
 
-import {Container, TextInput, Icon} from './styles';
+import { Container, TextInput, Icon } from './styles';
 
 interface InputProps extends TextInputProps {
   name: string;
@@ -27,14 +27,14 @@ interface InputRef {
 }
 
 const Input: React.ForwardRefRenderFunction<InputRef, InputProps> = (
-  {name, icon, containerStyle = {}, mask, ...rest},
+  { name, icon, containerStyle = {}, mask, ...rest },
   parentRef,
 ) => {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const inputElementRef = useRef<any>(null);
 
-  const {registerField, defaultValue = '', fieldName, error} = useField(name);
-  const inputValueRef = useRef<InputValueReference>({value: defaultValue});
+  const { registerField, defaultValue = '', fieldName, error } = useField(name);
+  const inputValueRef = useRef<InputValueReference>({ value: defaultValue });
 
   const [isFocused, setIsFocused] = useState(false);
   const [isFilled, setIsFilled] = useState(false);
@@ -63,7 +63,7 @@ const Input: React.ForwardRefRenderFunction<InputRef, InputProps> = (
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       setValue(ref: any, value) {
         inputValueRef.current.value = value;
-        inputElementRef.current.setNativeProps({text: value});
+        inputElementRef.current.setNativeProps({ text: value });
       },
       clearValue() {
         inputValueRef.current.value = '';
@@ -86,7 +86,7 @@ const Input: React.ForwardRefRenderFunction<InputRef, InputProps> = (
         defaultValue={defaultValue}
         onFocus={handleInputFocus}
         onBlur={handleInputBlur}
-        onChangeText={value => {
+        onChangeText={(value) => {
           inputValueRef.current.value = value;
         }}
         selectionColor="#f4ede8"
